@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дообучение Llama-4-Maverick в домашних условиях</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Дообучение Llama-4-Maverick в домашних условиях</h1>
+            <p class="subtitle">Руководство по использованию метода MoE Adapter</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="intro">
+            <p>Дообучение Llama-4-Maverick в домашних условиях возможно, но требует определенных ресурсов и подготовки. В этом руководстве описано, как это можно сделать, используя метод MoE Adapter.</p>
+        </section>
+
+        <section id="requirements">
+            <h2>Требования к оборудованию</h2>
+            <p>Для дообучения Llama-4-Maverick вам понадобится:</p>
+            <ol>
+                <li>
+                    <strong>GPU с достаточным объемом VRAM</strong>:
+                    <ul>
+                        <li>Минимум: NVIDIA RTX 3090 (24 ГБ VRAM) или RTX 4090 (24 ГБ VRAM)</li>
+                        <li>Рекомендуется: Несколько GPU или профессиональные карты (A100, H100)</li>
+                    </ul>
+                </li>
+                <li><strong>Оперативная память</strong>: минимум 32 ГБ, рекомендуется 64 ГБ или больше</li>
+                <li><strong>Дисковое пространство</strong>: минимум 100 ГБ SSD для модели и данных</li>
+            </ol>
+        </section>
+
+        <section id="environment">
+            <h2>Подготовка окружения</h2>
+            <ol>
+                <li>
+                    <p><strong>Установите необходимые библиотеки</strong>:</p>
+                    <pre><code class="language-bash">pip install torch torchvision torchaudio
+pip install transformers accelerate bitsandbytes
+pip install -e ./moe_fine_tuning  # Установка нашей библиотеки</code></pre>
+                </li>
+                <li>
+                    <p><strong>Загрузите модель</strong>:</p>
+                    <pre><code class="language-python">from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "meta-llama/Llama-4-Maverick-8B"  # Используйте правильное название модели
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype="auto",
+    device_map="auto",
+    load_in_8bit=True  # Для экономии памяти
+)</code></pre>
+                </li>
+            </ol>
+        </section>
+
+        <section id="data-preparation">
+            <h2>Подготовка данных</h2>
+            <p>Для дообучения вам понадобится набор данных. Для домашнего использования рекомендуем:</p>
+            <ol>
+                <li>
+                    <p><strong>Формат данных</strong>: JSON-файл со структурой:</p>
+                    <pre><code class="language-json">[
+  {"prompt": "Ваш вопрос или инструкция", "completion": "Желаемый ответ модели"},
+  ...
+]</code></pre>
+                </li>
+                <li><p><strong>Объем данных</strong>: Для эффективного дообучения достаточно 1000-5000 качественных примеров</p></li>
+                <li><p><strong>Качество данных</strong>: Важнее количества. Убедитесь, что данные соответствуют задаче, на которую вы хотите настроить модель</p></li>
+            </ol>
+        </section>
+
+        <section id="finetuning">
+            <h2>Процесс дообучения с использованием MoE Adapter</h2>
+            <ol>
+                <li>
+                    <p><strong>Создайте конфигурационный файл</strong> <code>config.json</code>:</p>
+                    <pre><code class="language-json">{
+  "base_model_name_or_path": "meta-llama/Llama-4-Maverick-8B",
+  "model_type": "causal_lm",
+  "num_experts": 8,
+  "expert_method": "molora",
+  "top_k": 2,
+  "capacity_factor": 1.25,
+  "router_z_loss_coef": 1e-3,
+  "load_balance_coef": 1e-2,
+  "diversity_factor": 0.1,
+  "freeze_non_moe_layers": true,
+  "output_dir": "./output",
+  "train_file": "path/to/your/data.json",
+  "batch_size": 4,
+  "gradient_accumulation_steps": 8,
+  "num_epochs": 3,
+  "learning_rate": 2e-4,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1
+}</code></pre>
+                </li>
+                <li>
+                    <p><strong>Запустите дообучение</strong>:</p>
+                    <pre><code class="language-bash">python -m moe_fine_tuning.examples.llama_fine_tuning \
+    --config config.json</code></pre>
+                </li>
+                <li>
+                    <p><strong>Мониторинг процесса</strong>:</p>
+                    <ul>
+                        <li>Следите за значениями потерь (loss)</li>
+                        <li>Обратите внимание на использование экспертов (должно быть равномерным)</li>
+                        <li>Процесс может занять от нескольких часов до нескольких дней в зависимости от объема данных и мощности GPU</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="optimization">
+            <h2>Оптимизация для домашнего использования</h2>
+            <p>Для дообучения на домашнем компьютере с ограниченными ресурсами:</p>
+            <ol>
+                <li>
+                    <p><strong>Используйте квантизацию</strong>:</p>
+                    <ul>
+                        <li>8-битная квантизация (load_in_8bit=True)</li>
+                        <li>4-битная квантизация (load_in_4bit=True) для еще большей экономии памяти</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Уменьшите размер батча и увеличьте gradient_accumulation_steps</strong>:</p>
+                    <ul>
+                        <li>batch_size=1 или 2</li>
+                        <li>gradient_accumulation_steps=16 или 32</li>
+                    </ul>
+                </li>
+                <li><p><strong>Используйте DeepSpeed или FSDP</strong> для распределенного обучения, если у вас несколько GPU</p></li>
+                <li>
+                    <p><strong>Ограничьте длину последовательностей</strong>:</p>
+                    <ul>
+                        <li>max_seq_length=512 или 1024 вместо полного контекстного окна</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="testing">
+            <h2>Проверка результатов</h2>
+            <p>После дообучения:</p>
+            <ol>
+                <li>
+                    <p><strong>Загрузите дообученную модель</strong>:</p>
+                    <pre><code class="language-python">from moe_fine_tuning.utils.model_utils import load_model_and_tokenizer
+
+model, tokenizer = load_model_and_tokenizer("./output/final_model")</code></pre>
+                </li>
+                <li>
+                    <p><strong>Протестируйте модель</strong>:</p>
+                    <pre><code class="language-python">prompt = "Ваш тестовый запрос"
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+outputs = model.generate(**inputs, max_length=200)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))</code></pre>
+                </li>
+            </ol>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>Возможные проблемы и решения</h2>
+            <ol>
+                <li>
+                    <p><strong>Нехватка VRAM</strong>:</p>
+                    <ul>
+                        <li>Используйте более агрессивную квантизацию</li>
+                        <li>Уменьшите batch_size и увеличьте gradient_accumulation_steps</li>
+                        <li>Используйте CPU offloading для некоторых слоев</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Переобучение</strong>:</p>
+                    <ul>
+                        <li>Увеличьте weight_decay</li>
+                        <li>Уменьшите количество эпох</li>
+                        <li>Добавьте больше разнообразных данных</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Медленное обучение</strong>:</p>
+                    <ul>
+                        <li>Уменьшите количество экспертов (num_experts=4)</li>
+                        <li>Используйте top_k=1 вместо top_k=2</li>
+                        <li>Примените mixed precision training (fp16)</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="llm-technologies">
+            <h2>Технологии внедрения парсера синтаксиса в современных LLM</h2>
+            <p>Современные языковые модели, включая Llama-4-Maverick, используют специальные технологии для обработки структурированных данных (код, JSON). Понимание этих технологий поможет эффективнее настроить модель для ваших задач.</p>
+
+            <h3>Общая идея</h3>
+            <p>Современные GPT-модели (включая Grok 3, Gemini, Qwen и др.) не полагаются только на классическое распределённое внимание для обработки больших структурированных данных. Вместо этого используется <strong>предобработчик (парсер)</strong>, который выделяет ключевые синтаксические элементы (якоря) и интегрирует их в архитектуру трансформера.</p>
+
+            <h3>Основные технологии</h3>
+            <ol>
+                <li>
+                    <p><strong>Adapter Layers (Адаптерные слои)</strong></p>
+                    <ul>
+                        <li><strong>Назначение</strong>: Вставка небольшого модуля (парсера) в предобученную GPT для выделения синтаксических структур.</li>
+                        <li><strong>Как работает</strong>: Между существующими слоями трансформера добавляются "калибровочные" слои (2–3 линейных слоя с активацией, ~1–3% новых параметров). Адаптер сканирует входные эмбеддинги, помечает ключевые токены особыми векторами.</li>
+                        <li><strong>Преимущества</strong>: Не трогает 99% весов GPT, легко обучается (1–2 дня на код/JSON-данных).</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <p><strong>Prefix-Tuning (Тюнинг префиксов)</strong></p>
+                    <ul>
+                        <li><strong>Назначение</strong>: Внедрение "виртуальных токенов" для активации синтаксического анализа без изменения архитектуры.</li>
+                        <li><strong>Как работает</strong>: К входному тексту добавляются обучаемые векторы-префиксы. Эти префиксы "резонируют" с внутренними слоями, заставляя модель фокусироваться на функциях, аргументах или иерархиях.</li>
+                        <li><strong>Преимущества</strong>: Ноль новых слоёв, только расширение эмбеддингов.</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <p><strong>BitFit (Тонкая настройка битов)</strong></p>
+                    <ul>
+                        <li><strong>Назначение</strong>: "Хирургическое" изменение весов для кодирования логики парсера.</li>
+                        <li><strong>Как работает</strong>: В предобученных весах (float32) редактируются bias-термы или младшие биты (~0.01% весов). Эти изменения "включают" способность распознавать синтаксис.</li>
+                        <li><strong>Преимущества</strong>: Минимальные затраты, незаметная интеграция.</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <p><strong>Sparse Attention с динамическим Top-K (Разрежённое внимание)</strong></p>
+                    <ul>
+                        <li><strong>Назначение</strong>: Динамическое обновление глобальных якорей для связи синтаксических элементов через длинные контексты.</li>
+                        <li><strong>Как работает</strong>: Парсер собирает кандидатов (функции, аргументы, ключи JSON). На каждом шаге генерации Top-K алгоритм выбирает 500–2000 актуальных якорей.</li>
+                        <li><strong>Преимущества</strong>: Обходит лимит статических якорей, масштабируется до 1M токенов.</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <p><strong>Memory-Augmented Attention (Внимание с дополненной памятью)</strong></p>
+                    <ul>
+                        <li><strong>Назначение</strong>: Хранение синтаксических якорей в быстрой Key-Value памяти для быстрого доступа.</li>
+                        <li><strong>Как работает</strong>: Парсер записывает токены в память. При обработке текста модель запрашивает память, а не ищет токены через всё внимание.</li>
+                        <li><strong>Преимущества</strong>: Быстро, экономит вычисления, подходит для длинных последовательностей.</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h3>Применение в дообучении Llama-4-Maverick</h3>
+            <p>При дообучении Llama-4-Maverick с использованием MoE Adapter мы фактически комбинируем несколько из этих подходов:</p>
+            <ul>
+                <li>Используем <strong>Adapter Layers</strong> для внедрения специализированных экспертов</li>
+                <li>Применяем элементы <strong>Sparse Attention</strong> для эффективной маршрутизации токенов</li>
+                <li>Используем <strong>BitFit</strong>-подобные техники для тонкой настройки маршрутизатора</li>
+            </ul>
+            <p>Это позволяет модели эффективно обрабатывать структурированные данные даже после дообучения на домашнем оборудовании.</p>
+        </section>
+
+        <section id="conclusion">
+            <h2>Заключение</h2>
+            <p>Дообучение Llama-4-Maverick в домашних условиях - сложная, но выполнимая задача при наличии подходящего оборудования и правильной настройки процесса. Метод MoE Adapter позволяет значительно снизить требования к памяти и ускорить процесс дообучения.</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 MoE Fine-Tuning Project. <a href="https://github.com/yourusername/llama4-maverick-finetuning">GitHub</a></p>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
