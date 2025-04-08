@@ -1,0 +1,97 @@
+# Fine-tuning Llama-4-Maverick at Home
+
+This repository contains a comprehensive guide and website on how to fine-tune the Llama-4-Maverick model at home using the MoE Adapter method.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Publishing on GitHub Pages](#publishing-on-github-pages)
+- [Project Structure](#project-structure)
+- [License](#license)
+
+## Overview
+
+Llama-4-Maverick is a powerful language model that can be fine-tuned for specific tasks. This project provides a detailed guide on how to fine-tune this model at home using the parameter-efficient MoE Adapter method, which significantly reduces computational resource requirements.
+
+Additionally, the project includes a section on syntax parser integration technologies in modern LLMs, which helps to better understand how models like Llama-4-Maverick work with structured data (code, JSON).
+
+## Requirements
+
+To fine-tune Llama-4-Maverick, you'll need:
+
+- **GPU with sufficient VRAM**: minimum NVIDIA RTX 3090 (24 GB) or RTX 4090 (24 GB)
+- **RAM**: minimum 32 GB, recommended 64 GB
+- **Disk space**: minimum 100 GB SSD
+- **Python 3.8+**
+- **PyTorch 2.0+**
+- **Transformers 4.30+**
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/llama4-maverick-finetuning.git
+cd llama4-maverick-finetuning
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Install the MoE Fine-Tuning library:
+```bash
+git clone https://github.com/yourusername/moe_fine_tuning.git
+pip install -e ./moe_fine_tuning
+```
+
+## Usage
+
+The complete guide is available on the [project website](https://yourusername.github.io/llama4-maverick-finetuning/) or in the [index.html](index.html) file.
+
+Main steps:
+
+1. Prepare your fine-tuning data in JSON format
+2. Create a configuration file
+3. Run the fine-tuning process
+4. Test the resulting model
+
+## Publishing on GitHub Pages
+
+To publish this guide on GitHub Pages, we've prepared a detailed step-by-step instruction in the [GITHUB_PAGES_GUIDE.md](GITHUB_PAGES_GUIDE.md) file.
+
+Brief overview of the process:
+
+1. Create a new repository on GitHub
+2. Set up authentication (Personal Access Token or SSH keys)
+3. Push your code to GitHub:
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/llama4-maverick-finetuning.git
+   git branch -M main
+   git push -u origin main
+   ```
+4. Enable GitHub Pages in the repository settings (Settings -> Pages -> Source -> GitHub Actions)
+5. Wait for the publication process to complete
+
+After that, your site will be available at: `https://YOUR_USERNAME.github.io/llama4-maverick-finetuning/`
+
+## Project Structure
+
+```
+llama4-maverick-finetuning/
+├── index.html          # Main HTML file with instructions
+├── css/                # CSS styles
+│   └── style.css
+├── js/                 # JavaScript files
+│   └── script.js
+├── img/                # Images (if any)
+├── README.md           # Project documentation
+└── requirements.txt    # Python dependencies
+```
+
+## License
+
+This project is distributed under the MIT license. See the [LICENSE](LICENSE) file for more information.

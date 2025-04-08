@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fine-tuning Llama-4-Maverick at Home</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Fine-tuning Llama-4-Maverick at Home</h1>
+            <p class="subtitle">Guide to Using the MoE Adapter Method</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="intro">
+            <p>Fine-tuning Llama-4-Maverick at home is possible, but requires certain resources and preparation. This guide describes how to do it using the MoE Adapter method.</p>
+        </section>
+
+        <section id="requirements">
+            <h2>Hardware Requirements</h2>
+            <p>To fine-tune Llama-4-Maverick, you'll need:</p>
+            <ol>
+                <li>
+                    <strong>GPU with sufficient VRAM</strong>:
+                    <ul>
+                        <li>Minimum: NVIDIA RTX 3090 (24 GB VRAM) or RTX 4090 (24 GB VRAM)</li>
+                        <li>Recommended: Multiple GPUs or professional cards (A100, H100)</li>
+                    </ul>
+                </li>
+                <li><strong>RAM</strong>: minimum 32 GB, recommended 64 GB or more</li>
+                <li><strong>Disk space</strong>: minimum 100 GB SSD for the model and data</li>
+            </ol>
+        </section>
+
+        <section id="environment">
+            <h2>Environment Setup</h2>
+            <ol>
+                <li>
+                    <p><strong>Install the necessary libraries</strong>:</p>
+                    <pre><code class="language-bash">pip install torch torchvision torchaudio
+pip install transformers accelerate bitsandbytes
+pip install -e ./moe_fine_tuning  # Install our library</code></pre>
+                </li>
+                <li>
+                    <p><strong>Load the model</strong>:</p>
+                    <pre><code class="language-python">from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "meta-llama/Llama-4-Maverick-8B"  # Use the correct model name
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype="auto",
+    device_map="auto",
+    load_in_8bit=True  # For memory savings
+)</code></pre>
+                </li>
+            </ol>
+        </section>
+
+        <section id="data-preparation">
+            <h2>Data Preparation</h2>
+            <p>For fine-tuning, you'll need a dataset. For home use, we recommend:</p>
+            <ol>
+                <li>
+                    <p><strong>Data format</strong>: JSON file with the structure:</p>
+                    <pre><code class="language-json">[
+  {"prompt": "Your question or instruction", "completion": "Desired model response"},
+  ...
+]</code></pre>
+                </li>
+                <li><p><strong>Data volume</strong>: For effective fine-tuning, 1000-5000 quality examples are sufficient</p></li>
+                <li><p><strong>Data quality</strong>: More important than quantity. Make sure the data matches the task you want to fine-tune the model for</p></li>
+            </ol>
+        </section>
+
+        <section id="finetuning">
+            <h2>Fine-tuning Process Using MoE Adapter</h2>
+            <ol>
+                <li>
+                    <p><strong>Create a configuration file</strong> <code>config.json</code>:</p>
+                    <pre><code class="language-json">{
+  "base_model_name_or_path": "meta-llama/Llama-4-Maverick-8B",
+  "model_type": "causal_lm",
+  "num_experts": 8,
+  "expert_method": "molora",
+  "top_k": 2,
+  "capacity_factor": 1.25,
+  "router_z_loss_coef": 1e-3,
+  "load_balance_coef": 1e-2,
+  "diversity_factor": 0.1,
+  "freeze_non_moe_layers": true,
+  "output_dir": "./output",
+  "train_file": "path/to/your/data.json",
+  "batch_size": 4,
+  "gradient_accumulation_steps": 8,
+  "num_epochs": 3,
+  "learning_rate": 2e-4,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1
+}</code></pre>
+                </li>
+                <li>
+                    <p><strong>Start the fine-tuning</strong>:</p>
+                    <pre><code class="language-bash">python -m moe_fine_tuning.examples.llama_fine_tuning \
+    --config config.json</code></pre>
+                </li>
+                <li>
+                    <p><strong>Process monitoring</strong>:</p>
+                    <ul>
+                        <li>Monitor loss values</li>
+                        <li>Pay attention to expert utilization (should be uniform)</li>
+                        <li>The process can take from several hours to several days depending on the amount of data and GPU power</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="optimization">
+            <h2>Optimization for Home Use</h2>
+            <p>For fine-tuning on a home computer with limited resources:</p>
+            <ol>
+                <li>
+                    <p><strong>Use quantization</strong>:</p>
+                    <ul>
+                        <li>8-bit quantization (load_in_8bit=True)</li>
+                        <li>4-bit quantization (load_in_4bit=True) for even greater memory savings</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Reduce batch size and increase gradient_accumulation_steps</strong>:</p>
+                    <ul>
+                        <li>batch_size=1 or 2</li>
+                        <li>gradient_accumulation_steps=16 or 32</li>
+                    </ul>
+                </li>
+                <li><p><strong>Use DeepSpeed or FSDP</strong> for distributed training if you have multiple GPUs</p></li>
+                <li>
+                    <p><strong>Limit sequence length</strong>:</p>
+                    <ul>
+                        <li>max_seq_length=512 or 1024 instead of the full context window</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="testing">
+            <h2>Testing the Results</h2>
+            <p>After fine-tuning:</p>
+            <ol>
+                <li>
+                    <p><strong>Load the fine-tuned model</strong>:</p>
+                    <pre><code class="language-python">from moe_fine_tuning.utils.model_utils import load_model_and_tokenizer
+
+model, tokenizer = load_model_and_tokenizer("./output/final_model")</code></pre>
+                </li>
+                <li>
+                    <p><strong>Test the model</strong>:</p>
+                    <pre><code class="language-python">prompt = "Your test query"
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+outputs = model.generate(**inputs, max_length=200)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))</code></pre>
+                </li>
+            </ol>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>Potential Problems and Solutions</h2>
+            <ol>
+                <li>
+                    <p><strong>Not enough VRAM</strong>:</p>
+                    <ul>
+                        <li>Use more aggressive quantization</li>
+                        <li>Reduce batch_size and increase gradient_accumulation_steps</li>
+                        <li>Use CPU offloading for some layers</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Overfitting</strong>:</p>
+                    <ul>
+                        <li>Increase weight_decay</li>
+                        <li>Reduce the number of epochs</li>
+                        <li>Add more diverse data</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Slow training</strong>:</p>
+                    <ul>
+                        <li>Reduce the number of experts (num_experts=4)</li>
+                        <li>Use top_k=1 instead of top_k=2</li>
+                        <li>Apply mixed precision training (fp16)</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="llm-technologies">
+            <h2>Syntax Parser Integration Technologies in Modern LLMs</h2>
+            <p>Modern language models, including Llama-4-Maverick, use special technologies to process structured data (code, JSON). Understanding these technologies will help you more effectively configure the model for your tasks.</p>
+            
+            <h3>General Idea</h3>
+            <p>Modern GPT models (including Grok 3, Gemini, Qwen, etc.) don't rely solely on classical distributed attention for processing large structured data. Instead, they use a <strong>preprocessor (parser)</strong> that identifies key syntactic elements (anchors) and integrates them into the transformer architecture.</p>
+            
+            <h3>Key Technologies</h3>
+            <ol>
+                <li>
+                    <p><strong>Adapter Layers</strong></p>
+                    <ul>
+                        <li><strong>Purpose</strong>: Insertion of a small module (parser) into a pre-trained GPT for identifying syntactic structures.</li>
+                        <li><strong>How it works</strong>: "Calibration" layers (2–3 linear layers with activation, ~1–3% new parameters) are added between existing transformer layers. The adapter scans input embeddings and marks key tokens with special vectors.</li>
+                        <li><strong>Advantages</strong>: Doesn't touch 99% of GPT weights, easy to train (1–2 days on code/JSON data).</li>
+                    </ul>
+                </li>
+                
+                <li>
+                    <p><strong>Prefix-Tuning</strong></p>
+                    <ul>
+                        <li><strong>Purpose</strong>: Introduction of "virtual tokens" to activate syntactic analysis without changing the architecture.</li>
+                        <li><strong>How it works</strong>: Trainable vector prefixes are added to the input text. These prefixes "resonate" with internal layers, causing the model to focus on functions, arguments, or hierarchies.</li>
+                        <li><strong>Advantages</strong>: Zero new layers, only embedding expansion.</li>
+                    </ul>
+                </li>
+                
+                <li>
+                    <p><strong>BitFit (Fine-tuning bits)</strong></p>
+                    <ul>
+                        <li><strong>Purpose</strong>: "Surgical" weight modification to encode parser logic.</li>
+                        <li><strong>How it works</strong>: In pre-trained weights (float32), bias terms or lower bits (~0.01% of weights) are edited. These changes "enable" the ability to recognize syntax.</li>
+                        <li><strong>Advantages</strong>: Minimal costs, seamless integration.</li>
+                    </ul>
+                </li>
+                
+                <li>
+                    <p><strong>Sparse Attention with dynamic Top-K</strong></p>
+                    <ul>
+                        <li><strong>Purpose</strong>: Dynamic updating of global anchors to connect syntactic elements across long contexts.</li>
+                        <li><strong>How it works</strong>: The parser collects candidates (functions, arguments, JSON keys). At each generation step, the Top-K algorithm selects 500–2000 relevant anchors.</li>
+                        <li><strong>Advantages</strong>: Bypasses the limit of static anchors, scales to 1M tokens.</li>
+                    </ul>
+                </li>
+                
+                <li>
+                    <p><strong>Memory-Augmented Attention</strong></p>
+                    <ul>
+                        <li><strong>Purpose</strong>: Storing syntactic anchors in fast Key-Value memory for quick access.</li>
+                        <li><strong>How it works</strong>: The parser writes tokens to memory. When processing text, the model queries the memory instead of searching for tokens through all attention.</li>
+                        <li><strong>Advantages</strong>: Fast, saves computation, suitable for long sequences.</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Application in Llama-4-Maverick Fine-tuning</h3>
+            <p>When fine-tuning Llama-4-Maverick using the MoE Adapter, we effectively combine several of these approaches:</p>
+            <ul>
+                <li>We use <strong>Adapter Layers</strong> to implement specialized experts</li>
+                <li>We apply elements of <strong>Sparse Attention</strong> for efficient token routing</li>
+                <li>We use <strong>BitFit</strong>-like techniques for fine-tuning the router</li>
+            </ul>
+            <p>This allows the model to efficiently process structured data even after fine-tuning on home equipment.</p>
+        </section>
+
+        <section id="conclusion">
+            <h2>Conclusion</h2>
+            <p>Fine-tuning Llama-4-Maverick at home is a challenging but feasible task with the right equipment and proper process configuration. The MoE Adapter method significantly reduces memory requirements and speeds up the fine-tuning process.</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 MoE Fine-Tuning Project. <a href="https://github.com/yourusername/llama4-maverick-finetuning">GitHub</a></p>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
